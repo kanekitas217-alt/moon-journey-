@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moonlit Journey</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --cream: #fff7ed;
+      --panel: rgba(36, 25, 55, .91);
+      --pink: #f7c0db;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      color: var(--cream);
+      background: #100e20;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    #world {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    #world canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      display: none;
+      pointer-events: none;
+    }
+
+    .screen.active { display: block; }
+    .interactive { pointer-events: auto; }
+
+    .start-screen {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      overflow-y: auto;
+      text-align: center;
+      background:
+        radial-gradient(ellipse at 50% 95%, #9a5d9270, transparent 56%),
+        linear-gradient(145deg, #17132bcc, #352442bb);
+    }
+
+    .start-screen.active { display: flex; }
+
+    .glass {
+      border: 1px solid #ffe6f055;
+      border-radius: 26px;
+      background: var(--panel);
+      box-shadow: 0 16px 55px #08031388, 0 0 34px #ffc7ed18;
+      backdrop-filter: blur(13px);
+    }
+
+    .start-panel {
+      width: min(590px, 100%);
+      padding: clamp(22px, 5vw, 42px);
+      animation: arrive 1.2s ease both;
+    }
+
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(18px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.8rem, 8vw, 5.2rem);
+      font-weight: 400;
+      text-shadow: 0 0 28px #f4c2e977;
+    }
+
+    h2 { margin: 0 0 8px; font-size: 1.5rem; font-weight: 400; }
+    p { line-height: 1.55; }
+    .subtitle { color: #ead9f2; }
+
+    .cat {
+      display: inline-block;
+      margin: 8px 0;
+      font-size: 4.2rem;
+      filter: drop-shadow(0 0 18px #f8c5e799);
+      animation: catFloat 2.3s ease-in-out infinite alternate;
+    }
+
+    @keyframes catFloat {
+      to { transform: translateY(-10px) rotate(4deg); }
+    }
+
+    .primary, .secondary {
+      padding: 11px 20px;
+      border: 1px solid #ffe0f188;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #f3bbd8, #c9b3ef);
+      color: #382344;
+      box-shadow: 0 0 24px #e8b5e833;
+      transition: transform .2s, box-shadow .2s, filter .2s;
+    }
+
+    .primary:hover, .secondary:hover {
+      transform: translateY(-3px) scale(1.035);
+      box-shadow: 0 0 28px #f5c5e977;
+      filter: brightness(1.08);
+    }
+
+    .primary:active, .secondary:active {
+      transform: translateY(1px) scale(.98);
+    }
+
+    .secondary {
+      color: var(--cream);
+      background: #ffffff17;
+    }
+
+    .rocket-hold {
+      display: inline-grid;
+      place-items: center;
+      width: 120px;
+      height: 110px;
+      margin: 8px;
+      border: 1px solid #ffe6f033;
+      border-radius: 50%;
+      background: radial-gradient(circle, #f7d9ec44, transparent 68%);
+      font-size: 4rem;
+      filter: drop-shadow(0 0 18px #ffacd9);
+      animation: rocketFloat 1.8s ease-in-out infinite alternate;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .rocket-hold.is-fueling {
+      animation: rocketFly .48s ease-in-out infinite alternate;
+      filter: drop-shadow(0 0 32px #ffd17d);
+    }
+
+    @keyframes rocketFloat {
+      to { transform: translateY(-8px) rotate(-5deg); }
+    }
+
+    @keyframes rocketFly {
+      from { transform: translate(0, 0) rotate(-8deg) scale(1); }
+      to { transform: translate(24px, -28px) rotate(12deg) scale(1.15); }
+    }
+
+    .fuel-wrap {
+      width: min(290px, 90%);
+      margin: 10px auto;
+      text-align: left;
+    }
+
+    .fuel-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .86rem;
+    }
+
+    .fuel-track {
+      height: 11px;
+      margin-top: 6px;
+      border-radius: 20px;
+      background: #ffffff26;
+      overflow: hidden;
+    }
+
+    #fuelFill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f7a9d2, #ffe8ad);
+      transition: width .08s linear;
+    }
+
+    .hud {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      width: min(620px, calc(100% - 24px));
+      padding: 12px 16px;
+      text-align: center;
+      transform: translateX(-50%);
+    }
+
+    .hud p { margin: 4px; }
+
+    .progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: .84rem;
+    }
+
+    .progress {
+      width: min(190px, 35vw);
+      height: 8px;
+      border-radius: 10px;
+      background: #ffffff2a;
+      overflow: hidden;
+    }
+
+    #progressFill {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #f6a9d4, #ffe9b0);
+      transition: width .2s;
+    }
+
+    .bottom-controls {
+      position: absolute;
+      bottom: 18px;
+      left: 0;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    .modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: min(450px, calc(100% - 28px));
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 22px;
+      text-align: center;
+      transform: translate(-50%, -50%);
+    }
+
+    .modal img {
+      display: block;
+      width: 100%;
+      max-height: 250px;
+      margin: 12px auto;
+      border-radius: 16px;
+      object-fit: cover;
+    }
+
+    .hidden { display: none !important; }
+    .answers { display: grid; gap: 9px; margin: 15px 0; }
+
+    .answers button {
+      padding: 11px;
+      border: 1px solid #ffffff3d;
+      border-radius: 12px;
+      background: #ffffff12;
+      transition: transform .2s, background .2s;
+    }
+
+    .answers button:hover {
+      background: #e9b5e833;
+      transform: scale(1.02);
+    }
+
+    .walk-panel {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      width: min(760px, calc(100% - 22px));
+      padding: 12px;
+      text-align: center;
+      transform: translateX(-50%);
+    }
+
+    .walk-panel p { margin: 3px 0 8px; }
+    .button-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+
+    #inventoryBag {
+      margin: 6px 0;
+      font-size: .88rem;
+      color: #f2e4fa;
+    }
+
+    .hall-button {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 10;
+      left: 50%;
+      bottom: 130px;
+      width: max-content;
+      max-width: 92vw;
+      padding: 11px 17px;
+      border: 1px solid #ffe0ef77;
+      border-radius: 20px;
+      background: #382344;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+      transition: .25s;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    #sliceCanvas {
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid #ffffff40;
+      border-radius: 15px;
+      background: linear-gradient(#251a3d, #71456d);
+      touch-action: none;
+    }
+
+    .coin {
+      width: 125px;
+      height: 125px;
+      border: 5px solid #ffe8af;
+      border-radius: 50%;
+      color: #503547;
+      background: radial-gradient(circle at 35% 30%, #fff8cc, #dcae4b);
+      font-size: 2rem;
+      box-shadow: 0 0 26px #ffda7c88;
+    }
+
+    .coin.flip { animation: flip .65s ease-in-out; }
+    @keyframes flip { 50% { transform: rotateY(900deg) scale(.8); } }
+
+    .cursor-sparkle {
+      position: fixed;
+      z-index: 30;
+      pointer-events: none;
+      color: #fff0c8;
+      text-shadow: 0 0 12px #ffd9ed;
+      animation: sparkleFade .8s ease-out forwards;
+    }
+
+    @keyframes sparkleFade {
+      to { opacity: 0; transform: translateY(-18px) scale(1.7) rotate(45deg); }
+    }
+
+    @media (max-width: 520px) {
+      .hud h2 { font-size: 1.2rem; }
+      .walk-panel { bottom: 7px; }
+      .toast { bottom: 165px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="world"></div>
+
+  <!-- Start screen -->
+  <section class="screen start-screen active" id="startScreen">
+    <div class="start-panel glass interactive">
+      <p class="subtitle">A little story beneath the stars</p>
+      <h1>Moonlit Journey</h1>
+      <div class="cat" aria-label="A cute cat">🐈</div>
+      <p class="subtitle">A quiet sky, a little cat, and a journey made just for you.</p>
+      <p>Press and hold the rocket to fill its fuel.</p>
+
+      <button class="rocket-hold" id="rocketHold" aria-label="Press and hold to fuel">🚀</button>
+
+      <div class="fuel-wrap">
+        <div class="fuel-label">
+          <span>Rocket fuel</span>
+          <span id="fuelText">0%</span>
+        </div>
+        <div class="fuel-track"><div id="fuelFill"></div></div>
+      </div>
+      <p class="subtitle">Keep holding until the tank is full ✨</p>
+    </div>
+  </section>
+
+  <!-- Flight screen -->
+  <section class="screen" id="flightScreen">
+    <div class="hud glass interactive">
+      <h2>A path through the quiet sky</h2>
+      <p id="flightHint">Fly forward to meet the first little wonder.</p>
+      <div class="progress-row">
+        <span id="distanceText">Journey: 0%</span>
+        <div class="progress"><div id="progressFill"></div></div>
+        <span id="starText">Wonders: 0 / 3</span>
+      </div>
+    </div>
+
+    <div class="bottom-controls interactive">
+      <button class="primary" id="flyButton">Fly forward ✨</button>
+    </div>
+
+    <div class="modal glass interactive hidden" id="starModal">
+      <h2 id="starTitle"></h2>
+      <img id="starPhoto" alt="A wonder from the journey">
+      <p id="starMessage"></p>
+      <button class="primary" id="continueButton">Continue the journey</button>
+    </div>
+  </section>
+
+  <!-- Moon and garden walking screen -->
+  <section class="screen" id="walkScreen">
+    <div class="hud glass interactive">
+      <h2 id="walkTitle">Welcome to the Moon</h2>
+      <p id="walkHint">Walk to the fairy beside the gate.</p>
+    </div>
+
+    <button class="primary interactive hall-button hidden" id="hallButton">
+      Enter the winter hall ❄
+    </button>
+
+    <div class="walk-panel glass interactive">
+      <p id="walkInstruction">Use the arrow keys or buttons to walk.</p>
+      <div id="inventoryBag">👜 Bag: empty</div>
+      <div class="button-row">
+        <button class="secondary" onclick="movePlayer(-1,0)">←</button>
+        <button class="secondary" onclick="movePlayer(1,0)">→</button>
+        <button class="secondary" onclick="movePlayer(0,-1)">↑ Walk</button>
+        <button class="secondary" onclick="movePlayer(0,1)">↓</button>
+        <button class="primary hidden" id="momoButton">Receive momo 🥟</button>
+        <button class="primary hidden" id="visitButton">Visit stall</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Winter hall -->
+  <section class="screen" id="hallScreen">
+    <div class="hud glass interactive">
+      <h2>The Winter Hall</h2>
+      <p>A warm golden glow, soft snow, and a little snow friend.</p>
+    </div>
+    <button class="secondary interactive hall-button" id="leaveHallButton">
+      ← Return to the garden
+    </button>
+  </section>
+
+  <!-- Slice game -->
+  <section class="screen" id="sliceScreen">
+    <div class="modal glass interactive">
+      <h2>Slice the fruit 🍉</h2>
+      <p>Drag across the fruit. Slice three to win!</p>
+      <canvas id="sliceCanvas" width="420" height="250"></canvas>
+      <p id="sliceScore">Fruit sliced: 0 / 3</p>
+      <button class="secondary" onclick="leaveGame()">Leave stall</button>
+    </div>
+  </section>
+
+  <!-- Flip game -->
+  <section class="screen" id="flipScreen">
+    <div class="modal glass interactive">
+      <h2>Flip the coin 🪙</h2>
+      <p>Tap the coin. You always win here!</p>
+      <button class="coin" id="coinButton">?</button>
+      <p id="coinResult">Tap the coin to flip it.</p>
+      <button class="secondary" onclick="leaveGame()">Leave stall</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const starInfo = [
+      {
+        title: "Dandelion Wishes",
+        message: "A little dandelion drifting through the twilight.",
+        photo: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=900&q=85"
+      },
+      {
+        title: "A Pink Little Promise",
+        message: "A soft pink blossom glowing like a tiny lantern.",
+        photo: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=85"
+      },
+      {
+        title: "Matcha Under the Stars",
+        message: "A warm cup of matcha, surrounded by tiny sparkles.",
+        photo: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=900&q=85"
+      }
+    ];
+
+    const stallData = [
+      { x: -3, z: -9,  title: "PINEAPPLE",   item: "pineapple",   emoji: "🍍", color: 0xa1844d, stock: 5 },
+      { x:  3, z: -19, title: "FANTA",       item: "fanta",       emoji: "🥤", color: 0xc36d51, stock: 5 },
+      { x: -3, z: -29, title: "WATER",       item: "water",       emoji: "💧", color: 0x638d9a, stock: 5 },
+      { x:  3, z: -39, title: "MANGO SHAKE", item: "mango shake", emoji: "🥭", color: 0xc88953, stock: 5 },
+      { x: -3, z: -49, title: "CHESS",       item: "chess",       emoji: "♟",  color: 0x756184, stock: 5 },
+      { x:  3, z: -59, title: "DANDELIONS",  item: "dandelions",  emoji: "🌼", color: 0x819451, stock: 5 },
+      { x: -3, z: -69, title: "SLICE IT",     item: "slice game",  emoji: "🍉", color: 0xb45f83, stock: 0, type: "slice" },
+      { x:  3, z: -79, title: "FLIP IT",      item: "flip game",   emoji: "🪙", color: 0x8070aa, stock: 0, type: "flip" }
+    ];
+
+    let scene, camera, renderer;
+    let mode = "start";
+    let progress = 0;
+    let targetProgress = 0;
+    let currentStar = 0;
+    let waitingForStar = false;
+    let player = { x: 0, z: 0 };
+    let stalls = [];
+    let nearbyStall = null;
+    let floatingLights = [];
+    let gardenPetals = [];
+    let snowParticles = [];
+    let inventory = {};
+    let fuel = 0;
+    let fuelTimer = null;
+    let toastTimer;
+    let fruit = [];
+    let sliced = 0;
+    let sliceLoop;
+    let sliceRunning = false;
+    let pointerDown = false;
+    let lastSparkle = 0;
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(screen => screen.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function clearWorld() {
+      while (scene.children.length) {
+        const object = scene.children[0];
+        scene.remove(object);
+        if (object.geometry) object.geometry.dispose();
+
+        if (object.material) {
+          if (Array.isArray(object.material)) {
+            object.material.forEach(material => material.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
+      }
+
+      floatingLights = [];
+      gardenPetals = [];
+      snowParticles = [];
+      stalls = [];
+    }
+
+    function addLights() {
+      scene.add(new THREE.AmbientLight(0xdac6ff, 1.3));
+
+      const moonLight = new THREE.DirectionalLight(0xd7d8ff, 1.8);
+      moonLight.position.set(-5, 9, 6);
+      scene.add(moonLight);
+
+      const warmLight = new THREE.PointLight(0xffc7ea, 1.4, 100);
+      warmLight.position.set(1, 5, 3);
+      scene.add(warmLight);
+    }
+
+    function makeRocket() {
+      const rocket = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(.34, .42, 1.5, 24),
+        new THREE.MeshStandardMaterial({
+          color: 0xe9e0ef,
+          metalness: .35,
+          roughness: .3
+        })
+      );
+      body.rotation.x = Math.PI / 2;
+      rocket.add(body);
+
+      const nose = new THREE.Mesh(
+        new THREE.ConeGeometry(.38, .8, 24),
+        new THREE.MeshStandardMaterial({ color: 0xf0b3d5, metalness: .15 })
+      );
+      nose.rotation.x = -Math.PI / 2;
+      nose.position.z = -.98;
+      rocket.add(nose);
+
+      const windowMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(.14, 18, 12),
+        new THREE.MeshPhysicalMaterial({
+          color: 0xb5eaff,
+          emissive: 0x4a9bbb,
+          emissiveIntensity: .7,
+          roughness: .14,
+          metalness: .2
+        })
+      );
+      windowMesh.position.set(0, .18, -.35);
+      rocket.add(windowMesh);
+
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(.2, .8, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffc276 })
+      );
+      flame.rotation.x = Math.PI / 2;
+      flame.position.z = 1.05;
+      rocket.add(flame);
+
+      rocket.name = "travelRocket";
+      return rocket;
+    }
+
+    function buildSpace() {
+      clearWorld();
+      scene.background = new THREE.Color("#111022");
+      scene.fog = new THREE.FogExp2("#171329", .006);
+      addLights();
+
+      // Deep star field
+      const positions = [];
+      for (let i = 0; i < 1800; i++) {
+        positions.push(
+          (Math.random() - .5) * 100,
+          (Math.random() - .5) * 65,
+          -Math.random() * 145
+        );
+      }
+
+      const starGeometry = new THREE.BufferGeometry();
+      starGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(positions, 3)
+      );
+
+      scene.add(new THREE.Points(
+        starGeometry,
+        new THREE.PointsMaterial({
+          color: 0xfff3ff,
+          size: .16,
+          sizeAttenuation: true
+        })
+      ));
+
+      // Curved glowing route
+      for (let z = -4; z > -112; z -= 2) {
+        const point = new THREE.Mesh(
+          new THREE.SphereGeometry(.05, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xd7baff })
+        );
+        point.position.set(Math.sin(z * .035) * .8, -.75, z);
+        scene.add(point);
+      }
+
+      addDandelion(0, .3, -18);
+      addPinkBlossom(1.2, .4, -41);
+      addMatchaCup(-1, .2, -64);
+
+      const moon = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 64, 48),
+        new THREE.MeshStandardMaterial({
+          color: 0xd9d0df,
+          roughness: .92,
+          metalness: .04
+        })
+      );
+      moon.position.set(0, 0, -103);
+      moon.name = "moon";
+      scene.add(moon);
+
+      // Moon crater dimples
+      for (let i = 0; i < 26; i++) {
+        const crater = new THREE.Mesh(
+          new THREE.CircleGeometry(.25 + Math.random() * .65, 20),
+          new THREE.MeshBasicMaterial({
+            color: 0x97899f,
+            transparent: true,
+            opacity: .35
+          })
+        );
+        crater.position.set(
+          (Math.random() - .5) * 8,
+          (Math.random() - .5) * 8,
+          -94.85
+        );
+        scene.add(crater);
+      }
+
+      scene.add(makeRocket());
+      camera.position.set(0, 2, 8);
+      camera.lookAt(0, 0, -10);
+    }
+
+    function addGlow(x, y, z, color) {
+      const light = new THREE.PointLight(color, 2.3, 10);
+      light.position.set(x, y, z);
+      scene.add(light);
+    }
+
+    function addDandelion(x, y, z) {
+      const flower = new THREE.Group();
+
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(.035, .05, 2.5, 10),
+        new THREE.MeshStandardMaterial({ color: 0x9fc18a })
+      );
+      stem.position.y = -1;
+      flower.add(stem);
+
+      const head = new THREE.Group();
+      head.add(new THREE.Mesh(
+        new THREE.SphereGeometry(.12, 14, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xfff2c5,
+          emissive: 0xc9a94f,
+          emissiveIntensity: .55
+        })
+      ));
+
+      for (let i = 0; i < 36; i++) {
+        const angle = i * 2.399;
+        const radius = .16 + (i % 5) * .035;
+        const seed = new THREE.Mesh(
+          new THREE.SphereGeometry(.035, 8, 6),
+          new THREE.MeshStandardMaterial({
+            color: 0xfff8dd,
+            emissive: 0xe5cc83,
+            emissiveIntensity: .45
+          })
+        );
+        seed.position.set(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius,
+          Math.sin(i) * .08
+        );
+        head.add(seed);
+      }
+
+      head.position.y = .3;
+      flower.add(head);
+      flower.position.set(x, y, z);
+      flower.name = "starObject0";
+      scene.add(flower);
+      addGlow(x, y + .3, z, 0xffedb5);
+    }
+
+    function addPinkBlossom(x, y, z) {
+      const blossom = new THREE.Group();
+
+      for (let i = 0; i < 5; i++) {
+        const petal = new THREE.Mesh(
+          new THREE.SphereGeometry(.35, 20, 14),
+          new THREE.MeshStandardMaterial({
+            color: i % 2 ? 0xffb9dc : 0xf6c1ed,
+            emissive: 0xa94579,
+            emissiveIntensity: .3,
+            roughness: .35
+          })
+        );
+        const angle = i * Math.PI * 2 / 5;
+        petal.position.set(Math.cos(angle) * .43, Math.sin(angle) * .43, 0);
+        petal.scale.set(1, .72, .45);
+        blossom.add(petal);
+      }
+
+      blossom.add(new THREE.Mesh(
+        new THREE.SphereGeometry(.2, 18, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xffe6a1,
+          emissive: 0xd18c45,
+          emissiveIntensity: .5
+        })
+      ));
+
+      blossom.position.set(x, y, z);
+      blossom.name = "starObject1";
+      scene.add(blossom);
+      addGlow(x, y, z, 0xffa4d3);
+    }
+
+    function addMatchaCup(x, y, z) {
+      const cup = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(.48, .36, .8, 36, 1, true),
+        new THREE.MeshStandardMaterial({
+          color: 0xf8eadb,
+          side: THREE.DoubleSide,
+          roughness: .3
+        })
+      );
+      body.position.y = -.25;
+      cup.add(body);
+
+      const tea = new THREE.Mesh(
+        new THREE.CircleGeometry(.43, 36),
+        new THREE.MeshStandardMaterial({
+          color: 0x9fb66c,
+          emissive: 0x52672f,
+          emissiveIntensity: .4
+        })
+      );
+      tea.rotation.x = -Math.PI / 2;
+      tea.position.y = .16;
+      cup.add(tea);
+
+      const handle = new THREE.Mesh(
+        new THREE.TorusGeometry(.25, .075, 14, 26),
+        new THREE.MeshStandardMaterial({ color: 0xf4dfd6 })
+      );
+      handle.position.set(.49, -.2, 0);
+      cup.add(handle);
+
+      cup.position.set(x, y, z);
+      cup.name = "starObject2";
+      scene.add(cup);
+      addGlow(x, y + .3, z, 0xb9edaa);
+
+      for (let i = 0; i < 11; i++) {
+        const sparkle = new THREE.Mesh(
+          new THREE.OctahedronGeometry(.08),
+          new THREE.MeshBasicMaterial({ color: 0xffe4a6 })
+        );
+        const angle = i * Math.PI * 2 / 11;
+        sparkle.position.set(
+          x + Math.cos(angle) * .9,
+          y + Math.sin(angle) * .8,
+          z
+        );
+        sparkle.name = "matchaSparkle";
+        sparkle.userData.phase = i;
+        scene.add(sparkle);
+      }
+    }
+
+    function flyForward() {
+      if (mode !== "flight" || waitingForStar) return;
+
+      const stops = [18, 41, 64];
+      const nextStop = currentStar < 3 ? stops[currentStar] : 100;
+      targetProgress = Math.min(progress + 12, nextStop);
+    }
+
+    function updateFlight() {
+      progress += (targetProgress - progress) * .035;
+
+      if (Math.abs(targetProgress - progress) < .035) {
+        progress = targetProgress;
+      }
+
+      const x = Math.sin(progress * .035) * .8;
+      const z = 8 - progress;
+      const rocket = scene.getObjectByName("travelRocket");
+
+      if (rocket) {
+        rocket.position.set(
+          x,
+          -.25 + Math.sin(Date.now() * .002) * .05,
+          z - 3
+        );
+        rocket.rotation.z = Math.sin(Date.now() * .001) * .025;
+      }
+
+      camera.position.set(x, 2, z + 3);
+      camera.lookAt(x, 0, z - 10);
+
+      const moon = scene.getObjectByName("moon");
+      if (moon) moon.rotation.y += .0015;
+
+      const percent = Math.min(100, Math.round(progress));
+      document.getElementById("distanceText").textContent = `Journey: ${percent}%`;
+      document.getElementById("progressFill").style.width = percent + "%";
+      document.getElementById("starText").textContent = `Wonders: ${currentStar} / 3`;
+
+      const stops = [18, 41, 64];
+
+      if (!waitingForStar && currentStar < 3 &&
+          progress >= stops[currentStar] - .15) {
+        progress = stops[currentStar];
+        targetProgress = progress;
+        waitingForStar = true;
+        showStar(currentStar);
+      }
+
+      if (currentStar === 3 && progress >= 99) {
+        mode = "moon";
+        player = { x: 0, z: 0 };
+        buildMoon();
+        showScreen("walkScreen");
+        document.getElementById("walkTitle").textContent = "Welcome to the Moon";
+        document.getElementById("walkHint").textContent = "Walk to the fairy beside the gate.";
+        document.getElementById("walkInstruction").textContent = "Use arrow keys or buttons to walk.";
+      }
+
+      document.getElementById("flightHint").textContent = waitingForStar
+        ? "A little wonder is waiting beside the path."
+        : currentStar === 3
+          ? "All three wonders found. Fly onward to the Moon."
+          : "Fly forward to see what is glowing ahead.";
+    }
+
+    function showStar(index) {
+      document.getElementById("starTitle").textContent = starInfo[index].title;
+
+      const image = document.getElementById("starPhoto");
+      image.src = starInfo[index].photo;
+      image.onerror = () => {
+        image.alt = "Photo couldn't load. Check your internet connection.";
+      };
+
+      document.getElementById("starMessage").textContent = starInfo[index].message;
+      document.getElementById("starModal").classList.remove("hidden");
+    }
+
+    document.getElementById("continueButton").addEventListener("click", () => {
+      document.getElementById("starModal").classList.add("hidden");
+      currentStar++;
+      waitingForStar = false;
+      showToast("A little light joined your journey ✨");
+    });
+
+    document.getElementById("flyButton").addEventListener("click", flyForward);
+
+    function makeGround(color) {
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(120, 120),
+        new THREE.MeshStandardMaterial({ color, roughness: 1 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.set(0, -1, -28);
+      scene.add(ground);
+    }
+
+    function makePlayer() {
+      const character = new THREE.Group();
+
+      const robe = new THREE.Mesh(
+        new THREE.ConeGeometry(.62, 1.35, 18),
+        new THREE.MeshStandardMaterial({ color: 0xd7c8e8, roughness: .78 })
+      );
+      robe.position.y = .1;
+      character.add(robe);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(.32, 20, 16),
+        new THREE.MeshStandardMaterial({ color: 0xffdfd2, roughness: .5 })
+      );
+      head.position.y = .9;
+      character.add(head);
+
+      character.name = "player";
+      character.position.set(player.x, -.2, player.z);
+      scene.add(character);
+    }
+
+    function addFairy(x, y, z) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 128;
+      const context = canvas.getContext("2d");
+      context.font = "90px serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText("🧚", 64, 68);
+
+      const fairy = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(canvas),
+        transparent: true
+      }));
+      fairy.position.set(x, y, z);
+      fairy.scale.set(2, 2, 1);
+      scene.add(fairy);
+
+      const plate = new THREE.Mesh(
+        new THREE.CylinderGeometry(.55, .55, .1, 24),
+        new THREE.MeshStandardMaterial({ color: 0xf2d6c6 })
+      );
+      plate.position.set(x + .4, -.35, z);
+      scene.add(plate);
+
+      for (let i = 0; i < 4; i++) {
+        const momo = new THREE.Mesh(
+          new THREE.SphereGeometry(.17, 14, 12),
+          new THREE.MeshStandardMaterial({ color: 0xfff1de })
+        );
+        momo.position.set(x + .15 + i * .17, -.22, z + (i % 2) * .18);
+        scene.add(momo);
+      }
+    }
+
+    function buildMoon() {
+      clearWorld();
+      mode = "moon";
+      scene.background = new THREE.Color("#1a1830");
+      scene.fog = new THREE.FogExp2("#1a1830", .012);
+      addLights();
+      makeGround(0x756481);
+
+      for (let i = 0; i < 55; i++) {
+        const rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(.25 + Math.random() * .6),
+          new THREE.MeshStandardMaterial({ color: 0x8c8299, roughness: .9 })
+        );
+        rock.position.set((Math.random() - .5) * 32, -.7, -Math.random() * 58);
+        rock.scale.y = .45;
+        scene.add(rock);
+      }
+
+      const gateMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf1c6e7,
+        emissive: 0x633d78,
+        emissiveIntensity: .7
+      });
+
+      const arch = new THREE.Mesh(
+        new THREE.TorusGeometry(2, .17, 16, 48, Math.PI),
+        gateMaterial
+      );
+      arch.position.set(0, 1, -13);
+      scene.add(arch);
+
+      [-2, 2].forEach(x => {
+        const pillar = new THREE.Mesh(
+          new THREE.BoxGeometry(.3, 2, .35),
+          gateMaterial
+        );
+        pillar.position.set(x, 0, -13);
+        scene.add(pillar);
+      });
+
+      const gateGlow = new THREE.PointLight(0xffa8e1, 2, 13);
+      gateGlow.position.set(0, 2, -13);
+      scene.add(gateGlow);
+
+      addFairy(-2.8, 1, -11);
+      makePlayer();
+
+      camera.position.set(player.x, 5, player.z + 10);
+      camera.lookAt(player.x, 0, player.z - 7);
+      updateFairyButton();
+    }
+
+    function addCherryTree(x, z) {
+      const tree = new THREE.Group();
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(.25, .48, 5, 14),
+        new THREE.MeshStandardMaterial({ color: 0x59483f, roughness: .9 })
+      );
+      trunk.position.y = 1.4;
+      tree.add(trunk);
+
+      // Curved-looking boughs
+      for (let i = 0; i < 4; i++) {
+        const branch = new THREE.Mesh(
+          new THREE.CylinderGeometry(.09, .16, 2.3, 9),
+          new THREE.MeshStandardMaterial({ color: 0x654a41 })
+        );
+        const angle = i * Math.PI / 2;
+        branch.position.set(Math.cos(angle) * .55, 3.1, Math.sin(angle) * .55);
+        branch.rotation.z = Math.cos(angle) * .55;
+        branch.rotation.x = Math.sin(angle) * .5;
+        tree.add(branch);
+      }
+
+      const crownMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf4b9d5,
+        emissive: 0x80405f,
+        emissiveIntensity: .2,
+        roughness: .8
+      });
+
+      for (let i = 0; i < 13; i++) {
+        const cluster = new THREE.Mesh(
+          new THREE.SphereGeometry(.8 + Math.random() * .55, 18, 14),
+          crownMaterial
+        );
+        cluster.position.set(
+          (Math.random() - .5) * 3.8,
+          3.6 + Math.random() * 1.6,
+          (Math.random() - .5) * 3.3
+        );
+        tree.add(cluster);
+      }
+
+      tree.position.set(x, -1, z);
+      scene.add(tree);
+    }
+
+    function addGardenLights() {
+      floatingLights = [];
+
+      for (let i = 0; i < 42; i++) {
+        const light = new THREE.Mesh(
+          new THREE.SphereGeometry(.045 + Math.random() * .04, 10, 8),
+          new THREE.MeshBasicMaterial({
+            color: i % 2 ? 0xffd98e : 0xd5c3ff
+          })
+        );
+
+        light.position.set(
+          (Math.random() - .5) * 16,
+          .5 + Math.random() * 5,
+          2 - Math.random() * 90
+        );
+        light.userData.baseY = light.position.y;
+        light.userData.phase = Math.random() * 6;
+        scene.add(light);
+        floatingLights.push(light);
+      }
+    }
+
+    function addGardenPetals() {
+      gardenPetals = [];
+
+      for (let i = 0; i < 110; i++) {
+        const petal = new THREE.Mesh(
+          new THREE.SphereGeometry(.06 + Math.random() * .05, 8, 7),
+          new THREE.MeshStandardMaterial({
+            color: i % 2 ? 0xffc5df : 0xf6d6ef,
+            emissive: 0x572a49,
+            emissiveIntensity: .18,
+            roughness: .6
+          })
+        );
+
+        petal.position.set(
+          (Math.random() - .5) * 17,
+          Math.random() * 9,
+          3 - Math.random() * 90
+        );
+        petal.userData.speed = .009 + Math.random() * .017;
+        petal.userData.sway = Math.random() * 8;
+        scene.add(petal);
+        gardenPetals.push(petal);
+      }
+    }
+
+    function makeProduct(emoji, color) {
+      const product = new THREE.Group();
+
+      if (emoji === "🍍") {
+        const fruit = new THREE.Mesh(
+          new THREE.SphereGeometry(.27, 16, 12),
+          new THREE.MeshStandardMaterial({ color: 0xf3bd3e, roughness: .6 })
+        );
+        fruit.scale.set(.8, 1.2, .8);
+        product.add(fruit);
+
+        for (let i = 0; i < 4; i++) {
+          const leaf = new THREE.Mesh(
+            new THREE.ConeGeometry(.08, .35, 8),
+            new THREE.MeshStandardMaterial({ color: 0x5c9b60 })
+          );
+          leaf.position.set((i - 1.5) * .07, .42, 0);
+          leaf.rotation.z = (i - 1.5) * .2;
+          product.add(leaf);
+        }
+      } else {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 128;
+        const context = canvas.getContext("2d");
+        context.font = "84px serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(emoji, 64, 68);
+
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(canvas),
+          transparent: true
+        }));
+        sprite.scale.set(.72, .72, 1);
+        product.add(sprite);
+
+        const base = new THREE.Mesh(
+          new THREE.SphereGeometry(.12, 10, 8),
+          new THREE.MeshStandardMaterial({ color })
+        );
+        base.position.y = -.1;
+        product.add(base);
+      }
+
+      return product;
+    }
+
+    function paintStallSign(stall) {
+      const context = stall.signCanvas.getContext("2d");
+      context.clearRect(0, 0, 512, 160);
+      context.fillStyle = "#49334f";
+      context.fillRect(0, 0, 512, 160);
+      context.strokeStyle = "#f8cce1";
+      context.lineWidth = 8;
+      context.strokeRect(4, 4, 504, 152);
+      context.fillStyle = "#fff4ea";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = "bold 32px Georgia";
+      context.fillText(stall.data.title, 256, 52);
+
+      if (!stall.data.type) {
+        context.font = "25px Georgia";
+        context.fillText(`Stock: ${stall.data.stock}`, 256, 112);
+      }
+
+      stall.signTexture.needsUpdate = true;
+    }
+
+    function addStall(data) {
+      const group = new THREE.Group();
+
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 1.2, 1.6),
+        new THREE.MeshStandardMaterial({ color: data.color, roughness: .75 })
+      );
+      counter.position.y = -.15;
+      group.add(counter);
+
+      for (const side of [-1, 1]) {
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(.09, .12, 2.7, 9),
+          new THREE.MeshStandardMaterial({ color: 0x705345 })
+        );
+        post.position.set(side * 1.42, .65, 0);
+        group.add(post);
+      }
+
+      const canopy = new THREE.Mesh(
+        new THREE.BoxGeometry(3.65, .24, 2.15),
+        new THREE.MeshStandardMaterial({ color: 0x70516d, roughness: .7 })
+      );
+      canopy.position.y = 2.05;
+      group.add(canopy);
+
+      const awning = new THREE.Mesh(
+        new THREE.BoxGeometry(3.3, .45, .2),
+        new THREE.MeshStandardMaterial({ color: 0xd39ab8 })
+      );
+      awning.position.set(0, 1.72, .98);
+      group.add(awning);
+
+      const lamp = new THREE.PointLight(0xffd28e, 1.2, 6);
+      lamp.position.set(0, 1.6, .2);
+      group.add(lamp);
+
+      const signCanvas = document.createElement("canvas");
+      signCanvas.width = 512;
+      signCanvas.height = 160;
+
+      const signTexture = new THREE.CanvasTexture(signCanvas);
+      const sign = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.7, .85),
+        new THREE.MeshBasicMaterial({ map: signTexture })
+      );
+      sign.position.set(0, 2.75, .88);
+      group.add(sign);
+
+      const stall = {
+        data,
+        group,
+        signCanvas,
+        signTexture,
+        displayedProducts: [],
+        x: data.x,
+        z: data.z,
+        title: data.title,
+        type: data.type || "shop"
+      };
+
+      paintStallSign(stall);
+
+      const visibleCount = Math.min(data.stock, 5);
+      for (let i = 0; i < visibleCount; i++) {
+        const product = makeProduct(data.emoji, data.color);
+        product.position.set((i - (visibleCount - 1) / 2) * .53, .78, .25);
+        group.add(product);
+        stall.displayedProducts.push(product);
+      }
+
+      group.position.set(data.x, 0, data.z);
+      scene.add(group);
+      stalls.push(stall);
+    }
+
+    function buildGarden() {
+      clearWorld();
+      mode = "garden";
+      scene.background = new THREE.Color("#292039");
+      scene.fog = new THREE.FogExp2("#292039", .009);
+      addLights();
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(140, 140),
+        new THREE.MeshStandardMaterial({ color: 0x334939, roughness: 1 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.set(0, -1, -34);
+      scene.add(ground);
+
+      const path = new THREE.Mesh(
+        new THREE.PlaneGeometry(7, 120),
+        new THREE.MeshStandardMaterial({ color: 0x786975, roughness: .92 })
+      );
+      path.rotation.x = -Math.PI / 2;
+      path.position.set(0, -.98, -43);
+      scene.add(path);
+
+      // Cherry blossom trees along the garden path
+      [[-7,-8],[7,-18],[-7,-31],[7,-45],[-7,-59],[7,-73]]
+        .forEach(([x, z]) => addCherryTree(x, z));
+
+      addGardenPetals();
+      addGardenLights();
+
+      // Keep stock levels when returning from the winter hall.
+      stallData.forEach(addStall);
+
+      makePlayer();
+      camera.position.set(player.x, 5, player.z + 10);
+      camera.lookAt(player.x, 0, player.z - 7);
+      updateStallActions();
+    }
+
+    function buildMoon() {
+      clearWorld();
+      mode = "moon";
+      scene.background = new THREE.Color("#1a1830");
+      scene.fog = new THREE.FogExp2("#1a1830", .012);
+      addLights();
+      makeGround(0x756481);
+
+      for (let i = 0; i < 55; i++) {
+        const rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(.25 + Math.random() * .6),
+          new THREE.MeshStandardMaterial({ color: 0x8c8299, roughness: .9 })
+        );
+        rock.position.set((Math.random() - .5) * 32, -.7, -Math.random() * 58);
+        rock.scale.y = .45;
+        scene.add(rock);
+      }
+
+      const gateMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf1c6e7,
+        emissive: 0x633d78,
+        emissiveIntensity: .7
+      });
+
+      const arch = new THREE.Mesh(
+        new THREE.TorusGeometry(2, .17, 16, 48, Math.PI),
+        gateMaterial
+      );
+      arch.position.set(0, 1, -13);
+      scene.add(arch);
+
+      [-2, 2].forEach(x => {
+        const pillar = new THREE.Mesh(
+          new THREE.BoxGeometry(.3, 2, .35),
+          gateMaterial
+        );
+        pillar.position.set(x, 0, -13);
+        scene.add(pillar);
+      });
+
+      const gateGlow = new THREE.PointLight(0xffa8e1, 2, 13);
+      gateGlow.position.set(0, 2, -13);
+      scene.add(gateGlow);
+
+      addFairy(-2.8, 1, -11);
+      makePlayer();
+      camera.position.set(player.x, 5, player.z + 10);
+      camera.lookAt(player.x, 0, player.z - 7);
+      updateFairyButton();
+    }
+
+    function addFairy(x, y, z) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 128;
+      const context = canvas.getContext("2d");
+      context.font = "90px serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText("🧚", 64, 68);
+
+      const fairy = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(canvas),
+        transparent: true
+      }));
+      fairy.position.set(x, y, z);
+      fairy.scale.set(2, 2, 1);
+      fairy.name = "fairy";
+      scene.add(fairy);
+
+      const plate = new THREE.Mesh(
+        new THREE.CylinderGeometry(.55, .55, .1, 24),
+        new THREE.MeshStandardMaterial({ color: 0xf2d6c6 })
+      );
+      plate.position.set(x + .4, -.35, z);
+      scene.add(plate);
+
+      for (let i = 0; i < 4; i++) {
+        const momo = new THREE.Mesh(
+          new THREE.SphereGeometry(.17, 14, 12),
+          new THREE.MeshStandardMaterial({ color: 0xfff1de })
+        );
+        momo.position.set(x + .15 + i * .17, -.22, z + (i % 2) * .18);
+        scene.add(momo);
+      }
+    }
+
+    function addCherryTree(x, z) {
+      const tree = new THREE.Group();
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(.25, .48, 5, 14),
+        new THREE.MeshStandardMaterial({ color: 0x59483f, roughness: .9 })
+      );
+      trunk.position.y = 1.4;
+      tree.add(trunk);
+
+      for (let i = 0; i < 4; i++) {
+        const branch = new THREE.Mesh(
+          new THREE.CylinderGeometry(.09, .16, 2.3, 9),
+          new THREE.MeshStandardMaterial({ color: 0x654a41 })
+        );
+        const angle = i * Math.PI / 2;
+        branch.position.set(Math.cos(angle) * .55, 3.1, Math.sin(angle) * .55);
+        branch.rotation.z = Math.cos(angle) * .55;
+        branch.rotation.x = Math.sin(angle) * .5;
+        tree.add(branch);
+      }
+
+      const crownMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf4b9d5,
+        emissive: 0x80405f,
+        emissiveIntensity: .2,
+        roughness: .8
+      });
+
+      for (let i = 0; i < 14; i++) {
+        const cluster = new THREE.Mesh(
+          new THREE.SphereGeometry(.8 + Math.random() * .55, 18, 14),
+          crownMaterial
+        );
+        cluster.position.set(
+          (Math.random() - .5) * 3.8,
+          3.6 + Math.random() * 1.6,
+          (Math.random() - .5) * 3.3
+        );
+        tree.add(cluster);
+      }
+
+      tree.position.set(x, -1, z);
+      scene.add(tree);
+    }
+
+    function makeWinterHall() {
+      clearWorld();
+      mode = "hall";
+      scene.background = new THREE.Color("#211831");
+      scene.fog = new THREE.FogExp2("#211831", .016);
+      addLights();
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(100, 100),
+        new THREE.MeshStandardMaterial({ color: 0x564458, roughness: .9 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -1;
+      scene.add(floor);
+
+      const wallMaterial = new THREE.MeshStandardMaterial({
+        color: 0x49364e,
+        roughness: .8
+      });
+
+      // Hall walls
+      for (const x of [-10, 10]) {
+        const wall = new THREE.Mesh(
+          new THREE.BoxGeometry(.5, 9, 38),
+          wallMaterial
+        );
+        wall.position.set(x, 3.5, -12);
+        scene.add(wall);
+      }
+
+      // Ceiling beams
+      for (let i = 0; i < 7; i++) {
+        const beam = new THREE.Mesh(
+          new THREE.BoxGeometry(20, .28, .4),
+          new THREE.MeshStandardMaterial({ color: 0x684d58 })
+        );
+        beam.position.set(0, 7, -25 + i * 5);
+        scene.add(beam);
+      }
+
+      // Warm lanterns and lights
+      for (let i = 0; i < 9; i++) {
+        const x = -8 + (i % 3) * 8;
+        const z = -4 - Math.floor(i / 3) * 10;
+
+        const string = new THREE.Mesh(
+          new THREE.CylinderGeometry(.025, .025, 1.2, 6),
+          new THREE.MeshStandardMaterial({ color: 0x9e816b })
+        );
+        string.position.set(x, 6.2, z);
+        scene.add(string);
+
+        const lantern = new THREE.Mesh(
+          new THREE.SphereGeometry(.35, 16, 14),
+          new THREE.MeshStandardMaterial({
+            color: 0xffd485,
+            emissive: 0xffa735,
+            emissiveIntensity: 1.3
+          })
+        );
+        lantern.position.set(x, 5.45, z);
+        scene.add(lantern);
+
+        const light = new THREE.PointLight(0xffc56e, 2, 13);
+        light.position.set(x, 5.3, z);
+        scene.add(light);
+      }
+
+      // Snowman
+      const snowMaterial = new THREE.MeshStandardMaterial({ color: 0xf7f0f3 });
+      [
+        { radius: 1.05, y: .05 },
+        { radius: .72, y: 1.45 },
+        { radius: .48, y: 2.55 }
+      ].forEach(part => {
+        const ball = new THREE.Mesh(
+          new THREE.SphereGeometry(part.radius, 24, 18),
+          snowMaterial
+        );
+        ball.position.set(0, part.y, -9);
+        scene.add(ball);
+      });
+
+      const carrot = new THREE.Mesh(
+        new THREE.ConeGeometry(.13, .6, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf5a064 })
+      );
+      carrot.rotation.x = -Math.PI / 2;
+      carrot.position.set(0, 2.55, -8.5);
+      scene.add(carrot);
+
+      // Falling snow
+      for (let i = 0; i < 180; i++) {
+        const flake = new THREE.Mesh(
+          new THREE.SphereGeometry(.035 + Math.random() * .045, 7, 6),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        flake.position.set(
+          (Math.random() - .5) * 28,
+          Math.random() * 14,
+          -Math.random() * 32
+        );
+        flake.userData.speed = .015 + Math.random() * .025;
+        flake.userData.sway = Math.random() * 8;
+        scene.add(flake);
+        snowParticles.push(flake);
+      }
+
+      camera.position.set(0, 4, 7);
+      camera.lookAt(0, 1, -9);
+    }
+
+    // Rocket fueling: pointer capture keeps the hold active until release.
+    const rocketHold = document.getElementById("rocketHold");
+
+    function startFuel(event) {
+      if (mode !== "start" || fuelTimer) return;
+
+      if (event.pointerId !== undefined) {
+        try { rocketHold.setPointerCapture(event.pointerId); } catch (error) {}
+      }
+
+      rocketHold.classList.add("is-fueling");
+
+      fuelTimer = setInterval(() => {
+        fuel = Math.min(100, fuel + 2);
+        document.getElementById("fuelFill").style.width = fuel + "%";
+        document.getElementById("fuelText").textContent = fuel + "%";
+
+        if (fuel >= 100) {
+          stopFuel();
+          mode = "flight";
+          showScreen("flightScreen");
+          showToast("The rocket is ready. Off we go ✨");
+        }
+      }, 55);
+    }
+
+    function stopFuel() {
+      if (fuelTimer) clearInterval(fuelTimer);
+      fuelTimer = null;
+      rocketHold.classList.remove("is-fueling");
+    }
+
+    rocketHold.addEventListener("pointerdown", startFuel);
+    rocketHold.addEventListener("pointerup", stopFuel);
+    rocketHold.addEventListener("pointercancel", stopFuel);
+    rocketHold.addEventListener("lostpointercapture", stopFuel);
+
+    // Fairy interaction
+    function updateFairyButton() {
+      const close = Math.hypot(player.x + 2.8, player.z + 11) < 5;
+      document.getElementById("momoButton").classList.toggle("hidden", !close);
+      document.getElementById("walkInstruction").textContent = close
+        ? "The fairy has a warm plate of momo for you!"
+        : "Walk toward the fairy beside the gate.";
+    }
+
+    document.getElementById("momoButton").addEventListener("click", () => {
+      showToast("The fairy gives you a warm plate of momo 🥟");
+
+      setTimeout(() => {
+        player = { x: 0, z: 0 };
+        buildGarden();
+        showScreen("walkScreen");
+        document.getElementById("walkTitle").textContent = "The Blossom Garden";
+        document.getElementById("walkHint").textContent = "Walk along the path to visit the stalls.";
+        document.getElementById("walkInstruction").textContent = "Petals drift between the trees.";
+        document.getElementById("hallButton").classList.remove("hidden");
+      }, 850);
+    });
+
+    // Garden movement and stall visits
+    function movePlayer(dx, dz) {
+      if (mode !== "moon" && mode !== "garden") return;
+
+      player.x = Math.max(-7, Math.min(7, player.x + dx * 1.3));
+      player.z = Math.max(-86, Math.min(3, player.z + dz * 1.7));
+
+      const character = scene.getObjectByName("player");
+      if (character) character.position.set(player.x, -.2, player.z);
+
+      if (mode === "moon") updateFairyButton();
+      if (mode === "garden") updateStallActions();
+    }
+
+    function updateStallActions() {
+      let closest = null;
+      let shortest = Infinity;
+
+      stalls.forEach(stall => {
+        const distance = Math.hypot(player.x - stall.x, player.z - stall.z);
+        if (distance < shortest) {
+          shortest = distance;
+          closest = stall;
+        }
+      });
+
+      nearbyStall = shortest < 4.5 ? closest : null;
+
+      const button = document.getElementById("visitButton");
+      button.classList.toggle("hidden", !nearbyStall);
+
+      if (nearbyStall) {
+        button.textContent = nearbyStall.type === "shop"
+          ? `Take ${nearbyStall.data.item}`
+          : `Play at ${nearbyStall.title}`;
+
+        document.getElementById("walkInstruction").textContent =
+          `You're at the ${nearbyStall.title} stall. Press E or tap the button.`;
+      } else {
+        document.getElementById("walkInstruction").textContent =
+          "Walk along the path to reach a stall.";
+      }
+    }
+
+    document.getElementById("visitButton").addEventListener("click", visitStall);
+
+    function updateStockSign(stall) {
+      const context = stall.signCanvas.getContext("2d");
+      context.clearRect(0, 0, 512, 160);
+      context.fillStyle = "#49334f";
+      context.fillRect(0, 0, 512, 160);
+      context.strokeStyle = "#f8cce1";
+      context.lineWidth = 8;
+      context.strokeRect(4, 4, 504, 152);
+      context.fillStyle = "#fff4ea";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = "bold 32px Georgia";
+      context.fillText(stall.data.title, 256, 52);
+      context.font = "25px Georgia";
+      context.fillText(`Stock: ${stall.data.stock}`, 256, 112);
+      stall.signTexture.needsUpdate = true;
+    }
+
+    function visitStall() {
+      if (mode !== "garden" || !nearbyStall) return;
+
+      if (nearbyStall.type === "slice") return openSlice();
+      if (nearbyStall.type === "flip") return openFlip();
+
+      if (nearbyStall.data.stock <= 0) {
+        showToast("This stall has sold out.");
+        return;
+      }
+
+      nearbyStall.data.stock--;
+
+      const product = nearbyStall.displayedProducts.pop();
+      if (product) nearbyStall.group.remove(product);
+
+      updateStockSign(nearbyStall);
+
+      const itemName = nearbyStall.data.item;
+      inventory[itemName] = (inventory[itemName] || 0) + 1;
+
+      const contents = Object.entries(inventory)
+        .map(([name, count]) => `${name} ×${count}`)
+        .join(", ");
+
+      document.getElementById("inventoryBag").textContent = `👜 Bag: ${contents}`;
+      showToast(`${itemName} added to your bag!`);
+    }
+
+    // Winter hall button and return
+    document.getElementById("hallButton").addEventListener("click", () => {
+      makeWinterHall();
+      showScreen("hallScreen");
+      showToast("Welcome to the winter hall ❄");
+    });
+
+    document.getElementById("leaveHallButton").addEventListener("click", () => {
+      player = { x: 0, z: -2 };
+      buildGarden();
+      showScreen("walkScreen");
+      document.getElementById("walkTitle").textContent = "The Blossom Garden";
+      document.getElementById("walkHint").textContent = "Walk along the path to visit the stalls.";
+      document.getElementById("hallButton").classList.remove("hidden");
+    });
+
+    // Slice game
+    const sliceCanvas = document.getElementById("sliceCanvas");
+    const sliceContext = sliceCanvas.getContext("2d");
+
+    function openSlice() {
+      mode = "slice";
+      showScreen("sliceScreen");
+      sliced = 0;
+      fruit = [];
+      sliceRunning = true;
+      document.getElementById("sliceScore").textContent = "Fruit sliced: 0 / 3";
+      for (let i = 0; i < 4; i++) addFruit();
+      drawFruit();
+    }
+
+    function addFruit() {
+      fruit.push({
+        x: 35 + Math.random() * 350,
+        y: 50 + Math.random() * 160,
+        r: 29,
+        emoji: ["🍉", "🍊", "🍓", "🍍"][Math.floor(Math.random() * 4)],
+        alive: true
+      });
+    }
+
+    function drawFruit() {
+      if (!sliceRunning) return;
+
+      sliceContext.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+      sliceContext.font = "38px serif";
+      sliceContext.textAlign = "center";
+
+      fruit.forEach(item => {
+        if (item.alive) sliceContext.fillText(item.emoji, item.x, item.y);
+      });
+
+      sliceLoop = requestAnimationFrame(drawFruit);
+    }
+
+    function cutFruit(event) {
+      if (!sliceRunning) return;
+
+      const rect = sliceCanvas.getBoundingClientRect();
+      const x = (event.clientX - rect.left) * sliceCanvas.width / rect.width;
+      const y = (event.clientY - rect.top) * sliceCanvas.height / rect.height;
+
+      for (const item of fruit) {
+        if (item.alive && Math.hypot(x - item.x, y - item.y) < item.r) {
+          item.alive = false;
+          sliced++;
+
+          document.getElementById("sliceScore").textContent =
+            `Fruit sliced: ${Math.min(3, sliced)} / 3`;
+
+          if (sliced >= 3) {
+            sliceRunning = false;
+            cancelAnimationFrame(sliceLoop);
+            showToast("You win here too, like you win in your life, matcha 💖");
+          } else {
+            addFruit();
+          }
+          break;
+        }
+      }
+    }
+
+    sliceCanvas.addEventListener("pointerdown", event => {
+      pointerDown = true;
+      cutFruit(event);
+    });
+
+    sliceCanvas.addEventListener("pointermove", event => {
+      if (pointerDown) cutFruit(event);
+    });
+
+    window.addEventListener("pointerup", () => { pointerDown = false; });
+
+    // Flip game: the player always wins.
+    function openFlip() {
+      mode = "flip";
+      showScreen("flipScreen");
+      document.getElementById("coinButton").textContent = "?";
+      document.getElementById("coinResult").textContent = "Tap the coin to flip it.";
+    }
+
+    document.getElementById("coinButton").addEventListener("click", event => {
+      const coin = event.currentTarget;
+      coin.classList.remove("flip");
+      void coin.offsetWidth;
+      coin.classList.add("flip");
+
+      setTimeout(() => {
+        const result = Math.random() < .5 ? "Heads" : "Tails";
+        coin.textContent = result === "Heads" ? "H" : "T";
+        document.getElementById("coinResult").textContent = `It's ${result}! You win! 🎉`;
+        showToast("You win here too, like you win in your life, matcha 💖");
+      }, 330);
+    });
+
+    function leaveGame() {
+      sliceRunning = false;
+      cancelAnimationFrame(sliceLoop);
+      mode = "garden";
+      showScreen("walkScreen");
+      updateStallActions();
+    }
+
+    // Main animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!renderer || !scene) return;
+
+      if (mode === "flight") {
+        updateFlight();
+
+        const dandelion = scene.getObjectByName("starObject0");
+        const blossom = scene.getObjectByName("starObject1");
+        const matcha = scene.getObjectByName("starObject2");
+
+        if (dandelion) dandelion.rotation.y += .006;
+        if (blossom) blossom.rotation.z = Math.sin(Date.now() * .001) * .12;
+        if (matcha) matcha.rotation.y += .004;
+
+        scene.children.forEach(object => {
+          if (object.name === "matchaSparkle") {
+            object.rotation.y += .025;
+            object.position.y += Math.sin(Date.now() * .003 + object.id) * .001;
+          }
+        });
+      }
+
+      if (mode === "moon" || mode === "garden") {
+        const character = scene.getObjectByName("player");
+        if (character) character.position.set(player.x, -.2, player.z);
+
+        camera.position.x += (player.x - camera.position.x) * .08;
+        camera.position.z += (player.z + 10 - camera.position.z) * .08;
+        camera.lookAt(player.x, 0, player.z - 7);
+      }
+
+      if (mode === "garden") {
+        floatingLights.forEach(light => {
+          light.position.y = light.userData.baseY +
+            Math.sin(Date.now() * .0015 + light.userData.phase) * .22;
+        });
+
+        gardenPetals.forEach(petal => {
+          petal.position.y -= petal.userData.speed;
+          petal.position.x += Math.sin(Date.now() * .001 + petal.userData.sway) * .008;
+          petal.rotation.z += .012;
+
+          if (petal.position.y < -1) {
+            petal.position.y = 8 + Math.random() * 3;
+            petal.position.x = (Math.random() - .5) * 17;
+          }
+        });
+      }
+
+      if (mode === "hall") {
+        snowParticles.forEach(flake => {
+          flake.position.y -= flake.userData.speed;
+          flake.position.x += Math.sin(Date.now() * .001 + flake.userData.sway) * .004;
+
+          if (flake.position.y < -1) {
+            flake.position.y = 13 + Math.random() * 4;
+            flake.position.x = (Math.random() - .5) * 28;
+          }
+        });
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Keyboard movement and flight
+    document.addEventListener("keydown", event => {
+      if (mode === "flight" && (event.key === "ArrowUp" || event.key === " ")) {
+        event.preventDefault();
+        flyForward();
+      }
+
+      if ((mode === "moon" || mode === "garden") && event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        if (event.key === "ArrowUp") movePlayer(0, -1);
+        if (event.key === "ArrowDown") movePlayer(0, 1);
+        if (event.key === "ArrowLeft") movePlayer(-1, 0);
+        if (event.key === "ArrowRight") movePlayer(1, 0);
+      }
+
+      if (event.key.toLowerCase() === "e" && mode === "garden") {
+        visitStall();
+      }
+    });
+
+    // Sparkles follow mouse or pointer movement.
+    document.addEventListener("pointermove", event => {
+      const now = Date.now();
+      if (now - lastSparkle < 45) return;
+      lastSparkle = now;
+
+      const sparkle = document.createElement("span");
+      sparkle.className = "cursor-sparkle";
+      sparkle.textContent = Math.random() > .5 ? "✦" : "✧";
+      sparkle.style.left = event.clientX + "px";
+      sparkle.style.top = event.clientY + "px";
+      sparkle.style.fontSize = (10 + Math.random() * 13) + "px";
+      document.body.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 800);
+    });
+
+    function init3D() {
+      if (!window.THREE) {
+        showToast("3D needs an internet connection. Reload while online.");
+        return;
+      }
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color("#111022");
+      camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, .1, 500);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(innerWidth, innerHeight);
+
+      if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      }
+
+      document.getElementById("world").appendChild(renderer.domElement);
+      buildSpace();
+      animate();
+    }
+
+    window.addEventListener("resize", () => {
+      if (!renderer || !camera) return;
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    init3D();
+  </script>
+</body>
+</html>
